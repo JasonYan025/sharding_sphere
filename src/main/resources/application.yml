@@ -1,0 +1,55 @@
+server:
+  port: 8080
+
+spring:
+  shardingsphere:
+    # MySQL基本配置
+    datasource:
+      # 数据库别名
+      names: ds0
+      # 官网的示例是springboot 1.x的，坑逼的，2.x的是通过common配置公共项
+      common:
+        type: com.zaxxer.hikari.HikariDataSource
+        driver-class-name: com.mysql.cj.jdbc.Driver
+        username: root
+        password: 123456
+      # 要配置的数据库的别名
+      ds0:
+        jdbc-url: jdbc:mysql://8.136.182.246:3306/ds0?serverTimezone=UTC&useSSL=false&useUnicode=true&characterEncoding=UTF-8
+    rules:
+      # 配置路由规则（分库和分表都是这个节点配置），详细的参照官网
+      sharding:
+        # 配置分表路由
+        tables:
+          # 逻辑分表
+          t_order:
+            # 真实的分表节点（看命名就知道了）
+            actual-data-nodes: ds0.t_order_$->{0..1}
+            table-strategy:
+              standard:
+                # 指定路由键
+                sharding-column: t_id
+                # 使用自定义分表算法的别名
+                sharding-algorithm-name: t-order-inline
+            key-generate-strategy:
+              column: t_id
+              # 主键生成算法别名
+              key-generator-name: snowflake
+        sharding-algorithms:
+          # 自定义分表算法的别名
+          t-order-inline:
+            #  采用行内表达式的方式
+            type: INLINE
+            # 本来我们用不到这个配置的，但是看了下解析这个节点的逻辑，是一定要存在的，这个节点是要解析成Map，就给了一个空元素的Map吧
+            props:
+              algorithm-expression: t_order_$->{t_id % 2}
+        key-generators:
+          # 主键生成算法别名节点，配置生成算法
+          snowflake:
+            type: SNOWFLAKE
+            props:
+              worker-id: 123
+    props:
+      # 打印SQL语句
+      sql-show: true
+      #sql-simple: true
